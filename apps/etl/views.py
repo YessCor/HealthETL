@@ -81,25 +81,46 @@ def ejecutar_etl_view(request):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser])
 def subir_dataset(request):
-    archivo = request.FILES.get('archivo')
-    if not archivo:
-        return Response({'error': 'No se envió archivo'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        archivo = request.FILES.get('archivo')
+        if not archivo:
+            return Response({'error': 'No se envió archivo'}, status=status.HTTP_400_BAD_REQUEST)
 
-    os.makedirs(settings.DATASETS_DIR, exist_ok=True)
-    ext = os.path.splitext(archivo.name)[1].lower()
-    if ext not in ['.csv', '.xlsx', '.xls']:
+        os.makedirs(settings.DATASETS_DIR, exist_ok=True)
+        ext = os.path.splitext(archivo.name)[1].lower()
+        if ext not in ['.csv', '.xlsx', '.xls']:
+            return Response(
+                {'error': 'Formato no soportado. Use CSV o Excel (.csv, .xlsx, .xls)'},
+                status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+            )
+
+        destino = os.path.join(settings.DATASETS_DIR, f'dataset_clinico{ext}')
+        with open(destino, 'wb') as f:
+            for chunk in archivo.chunks():
+                f.write(chunk)
+
+        historial = ejecutar_etl(destino, usuario=request.user)
+        data = HistorialETLSerializer(historial).data
+
+        if historial.estado == 'error':
+            # En caso de error de ETL, devolver 400/422 para que el frontend sepa que falló.
+            return Response(data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        # Intentar devolver detalle estructurado al frontend
+        detalle = str(e)
+        error_tipo = e.__class__.__name__
         return Response(
-            {'error': 'Formato no soportado. Use CSV o Excel (.csv, .xlsx, .xls)'},
-            status=status.HTTP_400_BAD_REQUEST
+            {
+                'error': 'Fallo al subir o procesar el archivo',
+                'detalle': detalle,
+                'tipo': error_tipo,
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    destino = os.path.join(settings.DATASETS_DIR, f'dataset_clinico{ext}')
-    with open(destino, 'wb') as f:
-        for chunk in archivo.chunks():
-            f.write(chunk)
-
-    historial = ejecutar_etl(destino, usuario=request.user)
-    return Response(HistorialETLSerializer(historial).data)
 
 
 @extend_schema(

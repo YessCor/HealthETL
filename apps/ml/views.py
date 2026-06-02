@@ -27,12 +27,43 @@ def entrenar(request):
     algoritmo = request.data.get('algoritmo', 'random_forest')
     try:
         modelo, metricas = entrenar_modelo(algoritmo)
-        return Response({'modelo': ModeloMLSerializer(modelo).data, 'metricas': metricas})
+
+        # Unificar respuesta esperada por el frontend
+        # - status: success
+        # - metrics: accuracy/precision/recall/f1_score
+        # - matrix: dict con claves en mayúscula
+        matrix = metricas.get('matrix')
+        if not matrix:
+            # compatibilidad con la estructura anterior
+            cm = metricas.get('confusion_matrix') or metricas.get('confusion_matrix', [])
+            clases = metricas.get('clases')
+            if cm and clases:
+                # cm esperada como lista NxN; se construye dict por etiqueta
+                # Si el orden no coincide, al menos mantenemos el mismo mapeo por índice
+                matrix = {
+                    str(clases[i]).upper(): [int(v) for v in row]
+                    for i, row in enumerate(cm)
+                }
+
+        unified = {
+            'status': 'success',
+            'metricas': {
+                'accuracy': metricas.get('accuracy'),
+                'precision': metricas.get('precision'),
+                'recall': metricas.get('recall'),
+                'f1_score': metricas.get('f1_score'),
+            },
+            'matrix': matrix or {},
+        }
+
+        return Response(unified | {
+            'modelo': ModeloMLSerializer(modelo).data,
+        })
     except ValueError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'status': 'error', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response({'error': f'Error entrenando modelo: {str(e)}'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'status': 'error', 'error': f'Error entrenando modelo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @extend_schema(

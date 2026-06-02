@@ -1,14 +1,18 @@
-# TODO - Continuación de la última tarea
+# TODO - Reto técnico ETL (Django + JS)
 
-## Objetivo
-Corregir el bug identificado en el frontend ETL para que el flujo de **subida de dataset** funcione estable.
+## Paso 1
+- [x] Revisar implementación actual de frontend `etl.js` y backend `apps/etl/views.py`.
 
-## Pasos
-- [x] Revisar y editar `frontend/static/js/etl.js` eliminando duplicación de `subirDataset()` y dejando una sola implementación consistente.
-- [x] Limpiar residuos no usados (p.ej. variables auxiliares) en el mismo archivo.
+## Paso 2
+- [ ] Corregir `frontend/static/js/etl.js` para enviar correctamente `FormData` y el header `X-CSRFToken`.
+- [ ] Hacer que el frontend muestre errores detallados devueltos por el backend (JSON con `error/detalle/logs`).
 
-- [x] Verificar que el endpoint `/api/etl/upload/` se consume correctamente con JWT y multipart. (revisión estática)
-- [ ] Ejecutar tests o correr el servidor y validar UI (requerirá Python disponible en el sistema).
+## Paso 3
+- [ ] Corregir backend `apps/etl/views.py` (vista `subir_dataset`) con `try/except` robusto y respuestas JSON consistentes y con códigos HTTP correctos.
 
+## Paso 4
+- [ ] Validar que la lectura de Excel funcione (si falta, instalar `openpyxl`).
 
+## Paso 5
+- [ ] Ejecutar pruebas manuales: subir `dataset_clinico.xlsx` y un CSV; verificar UI y errores.
 

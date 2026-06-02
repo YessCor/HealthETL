@@ -10,7 +10,7 @@ const COLORES_RIESGO = {
 async function cargarDashboard() {
   try {
     const res = await authFetch('/api/dashboard/kpis/');
-    if (!res) return;
+    if (!res || !res.ok) return;
     const data = await res.json();
 
     // KPIs principales
@@ -40,13 +40,13 @@ async function cargarDashboard() {
       : '<span class="text-muted small">Sin ejecuciones registradas</span>';
 
     // Estado Modelo ML
-    const ml = data.modelo_activo;
+    const ml = data?.modelo_activo;
     document.getElementById('ml-status').innerHTML = ml?.nombre
       ? `<div class="d-flex gap-3 flex-wrap">
            <div><div class="text-muted small">Modelo</div>
                 <div class="fw-semibold">${ml.nombre}</div></div>
            <div><div class="text-muted small">Accuracy</div>
-                <div class="fw-semibold text-success">${ml.accuracy ? (ml.accuracy*100).toFixed(1)+'%' : '—'}</div></div>
+                <div class="fw-semibold text-success">${ml.accuracy != null ? (ml.accuracy*100).toFixed(1)+'%' : '—'}</div></div>
          </div>`
       : '<span class="text-muted small">No hay modelos entrenados</span>';
 

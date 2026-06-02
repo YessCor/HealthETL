@@ -39,22 +39,31 @@ async function subirDataset() {
   progress.classList.remove('d-none');
 
   try {
+    const csrfToken = getCsrfToken();
+
     const res = await authFetch('/api/etl/upload/', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${getToken()}` },
+      headers: {
+        // authFetch ya agrega Authorization. Aquí solo CSRF.
+        'X-CSRFToken': csrfToken
+      },
       body: formData
     });
-    // Nota: no poner Content-Type con FormData, el browser lo pone con boundary
+
     if (!res) return;
-    const data = await res.json();
+
+    // Intentar parsear JSON tanto si ok como si falla.
+    const data = await res.json().catch(() => ({}));
+
     if (res.ok) {
       mostrarResultado(data);
       cargarHistorial();
     } else {
-      alert('Error: ' + (data.error || 'Fallo al subir archivo'));
+      const detalle = data.detalle || data.message || data.error || JSON.stringify(data);
+      alert(`Error al subir: ${detalle}`);
     }
-  } catch(e) {
-    alert('Error: ' + e.message);
+  } catch (e) {
+    alert('Error de conexión: ' + e.message);
   } finally {
     progress.classList.add('d-none');
   }
@@ -137,4 +146,18 @@ function badgeEstado(e) {
            en_proceso:'bg-warning text-dark', pendiente:'bg-secondary' }[e] || 'bg-secondary';
 }
 
+function getCsrfToken() {
+  // Django: leer cookie csrftoken (estándar)
+  const name = 'csrftoken';
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  for (const c of cookies) {
+    const cookie = c.trim();
+    if (cookie.startsWith(name + '=')) {
+      return decodeURIComponent(cookie.substring(name.length + 1));
+    }
+  }
+  return '';
+}
+
 document.addEventListener('DOMContentLoaded', cargarHistorial);
+

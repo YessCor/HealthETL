@@ -8,9 +8,14 @@ function getRefresh() { return localStorage.getItem('refresh'); }
 async function authFetch(url, options = {}) {
   options.headers = options.headers || {};
   options.headers['Authorization'] = `Bearer ${getToken()}`;
-  options.headers['Content-Type'] = options.headers['Content-Type'] || 'application/json';
+
+  // No forzar Content-Type cuando el body es FormData (el browser agrega boundary)
+  if (!(options.body instanceof FormData)) {
+    options.headers['Content-Type'] = options.headers['Content-Type'] || 'application/json';
+  }
 
   let res = await fetch(url, options);
+
 
   if (res.status === 401) {
     // Intenta refrescar token

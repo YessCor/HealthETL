@@ -34,9 +34,15 @@ def _preparar_dataset():
     for col in ['fumador', 'consumo_alcohol', 'antecedentes_familiares']:
         df[col] = df[col].astype(int)
 
-    X = df[FEATURES].fillna(df[FEATURES].median())
+    # Normalizar/limpiar valores faltantes
+    X = df[FEATURES].copy()
+    X = X.apply(pd.to_numeric, errors='coerce')
+    X = X.fillna(df[FEATURES].median(numeric_only=True))
+
+    # Etiquetas como string consistente
     le = LabelEncoder()
-    y = le.fit_transform(df['riesgo_enfermedad'].fillna('bajo'))
+    y_raw = df['riesgo_enfermedad'].astype(str).fillna('bajo')
+    y = le.fit_transform(y_raw)
     return X, y, le, df['id'].tolist()
 
 
@@ -54,13 +60,22 @@ def entrenar_modelo(algoritmo: str = 'random_forest') -> ModeloML:
     X_test_s = scaler.transform(X_test)
 
     clf = ALGORITMOS[algoritmo]
-    clf.fit(X_train_s, y_train)
-    y_pred = clf.predict(X_test_s)
 
-    acc = round(accuracy_score(y_test, y_pred), 4)
-    prec = round(precision_score(y_test, y_pred, average='weighted', zero_division=0), 4)
-    rec = round(recall_score(y_test, y_pred, average='weighted', zero_division=0), 4)
-    f1 = round(f1_score(y_test, y_pred, average='weighted', zero_division=0), 4)
+    # Nota: para RandomForest/DecisionTree el escalado no aporta y puede
+    # empeorar en algunos escenarios. Usamos escalado solo para modelos
+    # lineales.
+    if algoritmo in ['logistic_regression']:
+        X_train_use, X_test_use = X_train_s, X_test_s
+    else:
+        X_train_use, X_test_use = X_train, X_test
+
+    clf.fit(X_train_use, y_train)
+    y_pred = clf.predict(X_test_use)
+
+    acc = round(float(accuracy_score(y_test, y_pred)), 4)
+    prec = round(float(precision_score(y_test, y_pred, average='weighted', zero_division=0)), 4)
+    rec = round(float(recall_score(y_test, y_pred, average='weighted', zero_division=0)), 4)
+    f1 = round(float(f1_score(y_test, y_pred, average='weighted', zero_division=0)), 4)
     cm = confusion_matrix(y_test, y_pred).tolist()
 
     # Desactiva modelos anteriores del mismo tipo

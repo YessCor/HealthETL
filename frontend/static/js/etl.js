@@ -81,27 +81,27 @@ function mostrarResultado(data) {
 
   document.getElementById('etl-metricas').innerHTML = `
     <div class="col-6 col-md-3">
-      <div class="border rounded p-3 text-center">
-        <div class="text-muted small">Registros Entrada</div>
-        <div class="fw-bold fs-4 text-primary">${data.registros_entrada ?? 0}</div>
+      <div style="background:var(--sky);border:1px solid var(--sky-border);border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">Registros Entrada</div>
+        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--blue);">${data.registros_entrada ?? 0}</div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="border rounded p-3 text-center">
-        <div class="text-muted small">Registros Limpios</div>
-        <div class="fw-bold fs-4 text-success">${data.registros_limpios ?? 0}</div>
+      <div style="background:#f0fdf8;border:1px solid #a7f3d0;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">Registros Limpios</div>
+        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--success);">${data.registros_limpios ?? 0}</div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="border rounded p-3 text-center">
-        <div class="text-muted small">Duplicados</div>
-        <div class="fw-bold fs-4 text-warning">${data.duplicados_eliminados ?? 0}</div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">Duplicados</div>
+        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--warning);">${data.duplicados_eliminados ?? 0}</div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="border rounded p-3 text-center">
-        <div class="text-muted small">Tiempo (seg)</div>
-        <div class="fw-bold fs-4 text-info">${data.tiempo_ejecucion_seg ?? 0}s</div>
+      <div style="background:var(--bg);border:1px solid var(--sky-border);border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">Tiempo</div>
+        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--text);">${data.tiempo_ejecucion_seg ?? 0}s</div>
       </div>
     </div>
     <div class="col-12 mt-2 text-center">${estadoBadge}</div>

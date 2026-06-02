@@ -2,18 +2,25 @@
 {% load static %}
 
 {% block title %}Pacientes — HealthAnalytics IPS{% endblock %}
-{% block nav_pacientes %}active text-white{% endblock %}
+{% block nav_pacientes %}active{% endblock %}
 {% block page_title %}Gestión de Pacientes{% endblock %}
 
 {% block content %}
+
 <!-- Filtros -->
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body py-2">
+<div class="card border-0 shadow-sm mb-4 fade-up">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h6 class="mb-0"><i class="bi bi-funnel me-2 text-primary"></i>Filtros de búsqueda</h6>
+    <button class="btn btn-sm btn-outline-secondary" onclick="cargarPacientes()">
+      <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+    </button>
+  </div>
+  <div class="card-body py-3">
     <div class="row g-2 align-items-end">
       <div class="col-md-3">
-        <label class="form-label small fw-semibold mb-1">Riesgo</label>
-        <select class="form-select form-select-sm" id="filtro-riesgo" onchange="cargarPacientes()">
-          <option value="">Todos</option>
+        <label class="form-label">Nivel de Riesgo</label>
+        <select class="form-select" id="filtro-riesgo" onchange="cargarPacientes()">
+          <option value="">Todos los niveles</option>
           <option value="bajo">Bajo</option>
           <option value="medio">Medio</option>
           <option value="alto">Alto</option>
@@ -21,25 +28,25 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label small fw-semibold mb-1">Sexo</label>
-        <select class="form-select form-select-sm" id="filtro-sexo" onchange="cargarPacientes()">
+        <label class="form-label">Sexo Biológico</label>
+        <select class="form-select" id="filtro-sexo" onchange="cargarPacientes()">
           <option value="">Todos</option>
           <option value="M">Masculino</option>
           <option value="F">Femenino</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <div class="form-check form-switch mt-3">
-          <input class="form-check-input" type="checkbox" id="filtro-critico" onchange="cargarPacientes()">
-          <label class="form-check-label small" for="filtro-critico">Solo críticos</label>
+      <div class="col-md-3">
+        <label class="form-label">Buscar paciente</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="busqueda"
+                 placeholder="Nombre, diagnóstico..." onkeyup="filtrarLocal()">
         </div>
       </div>
-      <div class="col-md-4">
-        <label class="form-label small fw-semibold mb-1">Buscar</label>
-        <div class="input-group input-group-sm">
-          <input type="text" class="form-control" id="busqueda" placeholder="Nombre, diagnóstico..."
-                 onkeyup="filtrarLocal()">
-          <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <div class="col-md-3 d-flex align-items-center gap-3 pt-2">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="filtro-critico" onchange="cargarPacientes()">
+          <label class="form-check-label" for="filtro-critico" style="font-size:13px;font-weight:600;">Solo críticos</label>
         </div>
       </div>
     </div>
@@ -47,46 +54,68 @@
 </div>
 
 <!-- Tabla pacientes -->
-<div class="card border-0 shadow-sm">
-  <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between">
-    <h6 class="fw-semibold mb-0">
-      Lista de Pacientes <span class="badge bg-primary ms-2" id="badge-total">0</span>
+<div class="card border-0 shadow-sm fade-up fade-up-1">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h6 class="mb-0">
+      <i class="bi bi-table me-2 text-primary"></i>
+      Lista de Pacientes
+      <span class="badge ms-2" id="badge-total"
+            style="background:var(--sky);color:var(--blue);border:1px solid var(--sky-border);font-size:11px;font-weight:700;">0</span>
     </h6>
     <div class="d-flex gap-2">
-      <button onclick="descargarArchivo('/api/reportes/csv/', 'pacientes.csv')" class="btn btn-sm btn-outline-secondary">
+      <button onclick="descargarArchivo('/api/reportes/csv/', 'pacientes.csv')"
+              class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-filetype-csv me-1"></i>CSV
       </button>
-      <button onclick="descargarArchivo('/api/reportes/excel/', 'reporte_pacientes.xlsx')" class="btn btn-sm btn-outline-success">
+      <button onclick="descargarArchivo('/api/reportes/excel/', 'reporte_pacientes.xlsx')"
+              class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </button>
-      <button onclick="descargarArchivo('/api/reportes/pdf/', 'reporte_analitica_clinica.pdf')" class="btn btn-sm btn-outline-danger">
+      <button onclick="descargarArchivo('/api/reportes/pdf/', 'reporte_analitica_clinica.pdf')"
+              class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-file-earmark-pdf me-1"></i>PDF
       </button>
     </div>
   </div>
+
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 small">
-        <thead class="table-light">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
           <tr>
-            <th>ID</th><th>Nombre</th><th>Edad</th><th>Sexo</th>
-            <th>IMC</th><th>Glucosa</th><th>P.Sistólica</th>
-            <th>Diagnóstico</th><th>Riesgo</th><th>Crítico</th>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Edad</th>
+            <th>Sexo</th>
+            <th>IMC</th>
+            <th>Glucosa</th>
+            <th>P. Sistólica</th>
+            <th>Diagnóstico</th>
+            <th>Riesgo</th>
+            <th>Crítico</th>
           </tr>
         </thead>
         <tbody id="pacientes-tbody">
-          <tr><td colspan="10" class="text-center text-muted py-5">
-            <div class="spinner-border spinner-border-sm me-2"></div>Cargando pacientes...
-          </td></tr>
+          <tr>
+            <td colspan="10" class="text-center py-5" style="color:var(--text-muted);">
+              <div class="spinner-border spinner-border-sm me-2" style="color:var(--blue);"></div>
+              Cargando pacientes...
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
-  <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between">
-    <small class="text-muted" id="pagination-info"></small>
-    <div class="d-flex gap-1" id="pagination-controls"></div>
+
+  <!-- Paginación -->
+  <div class="card-body pt-2 pb-3 border-top" style="border-color:var(--sky-border)!important;">
+    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+      <small style="color:var(--text-muted);" id="paginacion-info">—</small>
+      <div class="d-flex gap-2" id="paginacion-botones"></div>
+    </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}

@@ -1,4 +1,4 @@
-/* pacientes.js — Listado de pacientes con filtros y paginación */
+/* pacientes.js — HealthAnalytics IPS */
 
 let paginaActual = 1;
 let totalPaginas = 1;
@@ -16,8 +16,8 @@ async function cargarPacientes(pagina = 1) {
   if (critico) url += `&critico=true`;
 
   const tbody = document.getElementById('pacientes-tbody');
-  tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">
-    <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
+  tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5" style="color:var(--text-muted);">
+    <div class="spinner-border spinner-border-sm me-2" style="color:var(--blue);"></div>Cargando…
   </td></tr>`;
 
   try {
@@ -32,11 +32,13 @@ async function cargarPacientes(pagina = 1) {
     todosLosPacientes = resultados;
     renderTabla(resultados);
     document.getElementById('badge-total').textContent = total;
-    document.getElementById('pagination-info').textContent =
-      `Mostrando ${resultados.length} de ${total} pacientes`;
+
+    const infoEl = document.getElementById('paginacion-info');
+    if (infoEl) infoEl.textContent = `Mostrando ${resultados.length} de ${total} pacientes`;
+
     renderPaginacion();
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4" style="color:var(--danger);">
       Error al cargar datos: ${e.message}
     </td></tr>`;
   }
@@ -45,34 +47,36 @@ async function cargarPacientes(pagina = 1) {
 function renderTabla(pacientes) {
   const tbody = document.getElementById('pacientes-tbody');
   if (!pacientes.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-5">Sin pacientes encontrados</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5" style="color:var(--text-muted);">
+      <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
+      Sin pacientes encontrados
+    </td></tr>`;
     return;
   }
 
-  const BADGE_RIESGO = {
-    bajo:    'bg-success',
-    medio:   'bg-warning text-dark',
-    alto:    'bg-orange text-white',
-    critico: 'bg-danger',
-  };
-
   tbody.innerHTML = pacientes.map(p => `
-    <tr class="${p.es_critico ? 'table-danger' : ''}">
-      <td class="fw-semibold text-primary">${p.id_paciente}</td>
-      <td>${p.nombres} ${p.apellidos}</td>
+    <tr style="${p.es_critico ? 'background:#fff5f6;' : ''}">
+      <td style="font-weight:700;color:var(--blue);">${p.id_paciente}</td>
+      <td style="font-weight:500;">${p.nombres} ${p.apellidos}</td>
       <td>${p.edad ?? '—'}</td>
-      <td>${p.sexo === 'M' ? '♂' : p.sexo === 'F' ? '♀' : '—'}</td>
-      <td>${p.imc ? p.imc.toFixed(1) : '—'}
-          ${p.clasificacion_imc ? `<br><small class="text-muted">${p.clasificacion_imc.replace('_',' ')}</small>` : ''}</td>
-      <td class="${p.glucosa > 126 ? 'text-danger fw-semibold' : ''}">${p.glucosa ?? '—'}</td>
-      <td class="${p.presion_sistolica > 140 ? 'text-danger fw-semibold' : ''}">${p.presion_sistolica ?? '—'}</td>
-      <td class="small">${p.diagnostico_preliminar || '—'}</td>
-      <td><span class="badge ${BADGE_RIESGO[p.riesgo_enfermedad] || 'bg-secondary'}">
-        ${p.riesgo_enfermedad || '—'}
-      </span></td>
-      <td>${p.es_critico
-        ? '<i class="bi bi-exclamation-triangle-fill text-danger" title="Paciente crítico"></i>'
-        : '<i class="bi bi-check-circle text-success"></i>'}</td>
+      <td>${p.sexo === 'M' ? '<span style="color:#1a6bcd;">♂ M</span>' : p.sexo === 'F' ? '<span style="color:#e63757;">♀ F</span>' : '—'}</td>
+      <td>
+        ${p.imc ? p.imc.toFixed(1) : '—'}
+        ${p.clasificacion_imc ? `<br><span style="font-size:10px;color:var(--text-muted);">${p.clasificacion_imc.replace('_',' ')}</span>` : ''}
+      </td>
+      <td style="${p.glucosa > 126 ? 'color:var(--danger);font-weight:600;' : ''}">${p.glucosa ?? '—'}</td>
+      <td style="${p.presion_sistolica > 140 ? 'color:var(--danger);font-weight:600;' : ''}">${p.presion_sistolica ?? '—'}</td>
+      <td style="font-size:12px;">${p.diagnostico_preliminar || '—'}</td>
+      <td>
+        <span class="badge-riesgo riesgo-${p.riesgo_enfermedad || 'bajo'}">
+          ${p.riesgo_enfermedad || '—'}
+        </span>
+      </td>
+      <td>
+        ${p.es_critico
+          ? '<i class="bi bi-exclamation-triangle-fill" style="color:var(--danger);" title="Crítico"></i>'
+          : '<i class="bi bi-check-circle" style="color:var(--success);"></i>'}
+      </td>
     </tr>
   `).join('');
 }
@@ -89,7 +93,8 @@ function filtrarLocal() {
 }
 
 function renderPaginacion() {
-  const ctrl = document.getElementById('pagination-controls');
+  const ctrl = document.getElementById('paginacion-botones');
+  if (!ctrl) return;
   if (totalPaginas <= 1) { ctrl.innerHTML = ''; return; }
 
   let html = `

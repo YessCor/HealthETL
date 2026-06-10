@@ -25,6 +25,7 @@ class Paciente(models.Model):
     clasificacion_imc= models.CharField(max_length=20, choices=IMC_CHOICES, null=True, blank=True)
     presion_sistolica   = models.IntegerField(null=True, blank=True)
     presion_diastolica  = models.IntegerField(null=True, blank=True)
+    clasificacion_presion = models.CharField(max_length=10, null=True, blank=True)
     frecuencia_cardiaca = models.IntegerField(null=True, blank=True)
     glucosa          = models.FloatField(null=True, blank=True)
     colesterol       = models.FloatField(null=True, blank=True)

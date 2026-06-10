@@ -17,7 +17,7 @@ class ReportesAPITestCase(TestCase):
         Paciente.objects.bulk_create([_paciente(i) for i in range(1, 11)])
         self.client = APIClient()
         u = Usuario.objects.create_superuser(
-            username='rep', password='Test1234!', email='r@t.com', rol='analista')
+            username='rep', password='Test1234!', email='r@t.com', rol='medico')
         res = self.client.post('/api/auth/login/', {'username': 'rep', 'password': 'Test1234!'})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {res.data["access"]}')
 

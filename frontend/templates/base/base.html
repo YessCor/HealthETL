@@ -30,30 +30,35 @@
     <div class="flex-grow-1 py-2">
       <div class="sidebar-section">Navegación</div>
       <ul class="nav flex-column px-1">
-        <li class="nav-item">
+        <li class="nav-item" id="nav-dashboard">
           <a href="/" class="nav-link {% block nav_dashboard %}{% endblock %}">
             <i class="bi bi-grid-1x2"></i>Dashboard
           </a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" id="nav-pacientes">
           <a href="/pacientes/" class="nav-link {% block nav_pacientes %}{% endblock %}">
             <i class="bi bi-people"></i>Pacientes
           </a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" id="nav-etl">
           <a href="/etl/" class="nav-link {% block nav_etl %}{% endblock %}">
             <i class="bi bi-arrow-left-right"></i>Proceso ETL
           </a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" id="nav-ml">
           <a href="/ml/" class="nav-link {% block nav_ml %}{% endblock %}">
             <i class="bi bi-cpu"></i>Machine Learning
           </a>
         </li>
+        <li class="nav-item" id="nav-usuarios">
+          <a href="/usuarios/" class="nav-link {% block nav_usuarios %}{% endblock %}">
+            <i class="bi bi-shield-lock"></i>Usuarios
+          </a>
+        </li>
       </ul>
 
-      <div class="sidebar-section mt-3">Reportes</div>
-      <div class="sidebar-exports">
+      <div class="sidebar-section mt-3" id="nav-reportes">Reportes</div>
+      <div class="sidebar-exports" id="nav-reportes-links">
         <a href="#" onclick="descargarArchivo('/api/reportes/csv/', 'pacientes.csv')" class="nav-link">
           <i class="bi bi-filetype-csv"></i>Exportar CSV
         </a>
@@ -97,7 +102,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="{% static 'js/auth.js' %}"></script>
+<script src="{% static 'js/auth.js' %}?v=3"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

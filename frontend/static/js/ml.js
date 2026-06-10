@@ -270,6 +270,7 @@ async function predecirPaciente() {
           <div class="d-flex align-items-center gap-3">
             <div class="fs-2">🏥</div>
             <div class="flex-grow-1">
+              <div class="small text-muted">Paciente: <strong>${data.paciente_nombre || 'ID ' + data.paciente_id}</strong></div>
               <div class="fw-bold">Riesgo Predicho:
                 <span class="text-${color === 'orange' ? 'warning' : color} text-uppercase">${data.riesgo_predicho}</span>
               </div>

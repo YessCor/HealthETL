@@ -25,3 +25,10 @@ class CustomTokenSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['rol'] = user.rol
         return token
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = self.user
+        data['username'] = user.username
+        data['rol'] = user.rol
+        return data

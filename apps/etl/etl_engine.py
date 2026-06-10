@@ -185,6 +185,19 @@ def _calcular_imc(df: pd.DataFrame, logs: list) -> pd.DataFrame:
     return df
 
 
+def _clasificar_presion(df: pd.DataFrame, logs: list) -> pd.DataFrame:
+    sistolica = df.get('presion_sistolica', pd.Series(dtype=float)).astype(float)
+    cond_alta = sistolica >= 140
+    cond_baja = sistolica < 90
+    df['clasificacion_presion'] = 'normal'
+    df.loc[cond_alta, 'clasificacion_presion'] = 'alta'
+    df.loc[cond_baja, 'clasificacion_presion'] = 'baja'
+    df.loc[sistolica.isna(), 'clasificacion_presion'] = None
+    clasificadas = int(df['clasificacion_presion'].notna().sum())
+    logs.append(f"[TRANSFORM] Presión clasificada en {clasificadas} pacientes (alta>=140, baja<90)")
+    return df
+
+
 def _detectar_criticos(df: pd.DataFrame, logs: list) -> pd.DataFrame:
     df['es_critico'] = (
         (df.get('presion_sistolica', pd.Series(dtype=float)) > 180) |
@@ -206,6 +219,7 @@ def transform(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     df = _validar_rangos(df, logs)
     df = _normalizar_categoricas(df, logs)
     df = _calcular_imc(df, logs)
+    df = _clasificar_presion(df, logs)
     df = _detectar_criticos(df, logs)
 
     logs.append(f"[TRANSFORM] Registros finales limpios: {len(df)}")
@@ -250,6 +264,7 @@ def load(df: pd.DataFrame, logs: list) -> int:
             riesgo_enfermedad=row.get('riesgo_enfermedad'),
             fecha_consulta=row.get('fecha_consulta') if pd.notna(row.get('fecha_consulta')) else None,
             es_critico=bool(row.get('es_critico', False)),
+            clasificacion_presion=row.get('clasificacion_presion'),
         )
         pacientes.append(p)
 

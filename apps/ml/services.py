@@ -118,7 +118,7 @@ def entrenar_modelo(algoritmo: str = 'random_forest') -> ModeloML:
 def predecir_paciente(paciente_id: int, modelo_id: int = None) -> dict:
     """Predice riesgo para un paciente específico cargando el modelo desde el disco."""
     from apps.etl.models import Paciente as P
-    paciente = P.objects.get(id=paciente_id)
+    paciente = P.objects.get(id_paciente=paciente_id)
 
     datos = {f: getattr(paciente, f, 0) or 0 for f in FEATURES}
     for col in ['fumador', 'consumo_alcohol', 'antecedentes_familiares']:
@@ -164,9 +164,12 @@ def predecir_paciente(paciente_id: int, modelo_id: int = None) -> dict:
         with open(le_path, 'rb') as f:
             le = pickle.load(f)
 
-    X_scaled = scaler.transform(X_input)
+    if modelo_obj.algoritmo in ['logistic_regression']:
+        X_use = scaler.transform(X_input)
+    else:
+        X_use = X_input
 
-    proba = clf.predict_proba(X_scaled)[0]
+    proba = clf.predict_proba(X_use)[0]
     clase_idx = np.argmax(proba)
     riesgo = le.inverse_transform([clase_idx])[0]
     probabilidad = round(float(proba[clase_idx]), 4)
@@ -180,6 +183,7 @@ def predecir_paciente(paciente_id: int, modelo_id: int = None) -> dict:
 
     return {
         'paciente_id': paciente_id,
+        'paciente_nombre': f"{paciente.nombres} {paciente.apellidos}",
         'riesgo_predicho': riesgo,
         'probabilidad': probabilidad,
         'distribucion_clases': dict(zip(le.classes_, proba.tolist())),

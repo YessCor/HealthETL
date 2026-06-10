@@ -65,7 +65,7 @@ function renderTabla(pacientes) {
         ${p.clasificacion_imc ? `<br><span style="font-size:10px;color:var(--text-muted);">${p.clasificacion_imc.replace('_',' ')}</span>` : ''}
       </td>
       <td style="${p.glucosa > 126 ? 'color:var(--danger);font-weight:600;' : ''}">${p.glucosa ?? '—'}</td>
-      <td style="${p.presion_sistolica > 140 ? 'color:var(--danger);font-weight:600;' : ''}">${p.presion_sistolica ?? '—'}</td>
+      <td>${p.presion_sistolica ?? '—'} ${p.clasificacion_presion ? `<br><span style="font-size:10px;color:${p.clasificacion_presion === 'alta' ? 'var(--danger)' : p.clasificacion_presion === 'baja' ? 'var(--warning)' : 'var(--text-muted)'};">${p.clasificacion_presion.charAt(0).toUpperCase() + p.clasificacion_presion.slice(1)}</span>` : ''}</td>
       <td style="font-size:12px;">${p.diagnostico_preliminar || '—'}</td>
       <td>
         <span class="badge-riesgo riesgo-${p.riesgo_enfermedad || 'bajo'}">
@@ -79,6 +79,24 @@ function renderTabla(pacientes) {
       </td>
     </tr>
   `).join('');
+}
+
+function descargarPacientes(formato) {
+  const riesgo  = document.getElementById('filtro-riesgo').value;
+  const sexo    = document.getElementById('filtro-sexo').value;
+  const critico = document.getElementById('filtro-critico').checked;
+  const busqueda = document.getElementById('busqueda').value;
+
+  let url = `/api/reportes/${formato}/?`;
+  const params = [];
+  if (riesgo)  params.push(`riesgo=${riesgo}`);
+  if (sexo)    params.push(`sexo=${sexo}`);
+  if (critico) params.push(`critico=true`);
+  if (busqueda) params.push(`busqueda=${encodeURIComponent(busqueda)}`);
+  url += params.join('&');
+
+  const filenames = { csv: 'pacientes.csv', excel: 'reporte_pacientes.xlsx', pdf: 'reporte_pacientes.pdf' };
+  descargarArchivo(url, filenames[formato] || `pacientes.${formato}`);
 }
 
 function filtrarLocal() {

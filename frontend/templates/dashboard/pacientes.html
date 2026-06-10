@@ -63,15 +63,15 @@
             style="background:var(--sky);color:var(--blue);border:1px solid var(--sky-border);font-size:11px;font-weight:700;">0</span>
     </h6>
     <div class="d-flex gap-2">
-      <button onclick="descargarArchivo('/api/reportes/csv/', 'pacientes.csv')"
+      <button onclick="descargarPacientes('csv')"
               class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-filetype-csv me-1"></i>CSV
       </button>
-      <button onclick="descargarArchivo('/api/reportes/excel/', 'reporte_pacientes.xlsx')"
+      <button onclick="descargarPacientes('excel')"
               class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </button>
-      <button onclick="descargarArchivo('/api/reportes/pdf/', 'reporte_analitica_clinica.pdf')"
+      <button onclick="descargarPacientes('pdf')"
               class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-file-earmark-pdf me-1"></i>PDF
       </button>

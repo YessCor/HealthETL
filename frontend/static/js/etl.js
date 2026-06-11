@@ -99,12 +99,22 @@ function mostrarResultado(data) {
       </div>
     </div>
     <div class="col-6 col-md-3">
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">Ignorados</div>
+        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--danger);">${data.registros_ignorados ?? 0}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
       <div style="background:var(--bg);border:1px solid var(--sky-border);border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">Tiempo</div>
         <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--text);">${data.tiempo_ejecucion_seg ?? 0}s</div>
       </div>
     </div>
-    <div class="col-12 mt-2 text-center">${estadoBadge}</div>
+    <div class="col-12">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;">${estadoBadge}
+        ${(data.registros_ignorados ?? 0) > 0 ? '<span style="font-size:12px;color:var(--text-muted);">Se ignoraron ' + data.registros_ignorados + ' registros por datos basura</span>' : ''}
+      </div>
+    </div>
   `;
 
   document.getElementById('etl-log').textContent = data.log_detalle || 'Sin log disponible';

@@ -65,7 +65,7 @@ function renderTabla(pacientes) {
         ${p.clasificacion_imc ? `<br><span style="font-size:10px;color:var(--text-muted);">${p.clasificacion_imc.replace('_',' ')}</span>` : ''}
       </td>
       <td style="${p.glucosa > 126 ? 'color:var(--danger);font-weight:600;' : ''}">${p.glucosa ?? '—'}</td>
-      <td>${p.presion_sistolica ?? '—'} ${p.clasificacion_presion ? `<br><span style="font-size:10px;color:${p.clasificacion_presion === 'alta' ? 'var(--danger)' : p.clasificacion_presion === 'baja' ? 'var(--warning)' : 'var(--text-muted)'};">${p.clasificacion_presion.charAt(0).toUpperCase() + p.clasificacion_presion.slice(1)}</span>` : ''}</td>
+      <td style="${p.presion_sistolica > 140 ? 'color:var(--danger);font-weight:600;' : ''}">${p.presion_sistolica ?? '—'}</td>
       <td style="font-size:12px;">${p.diagnostico_preliminar || '—'}</td>
       <td>
         <span class="badge-riesgo riesgo-${p.riesgo_enfermedad || 'bajo'}">

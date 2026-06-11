@@ -82,10 +82,18 @@ def _limpiar_tipos(df: pd.DataFrame, logs: list) -> tuple[pd.DataFrame, int]:
         'frecuencia_cardiaca': 'int', 'glucosa': 'float',
         'colesterol': 'float', 'saturación_oxígeno': 'float', 'temperatura': 'float',
     }
+    PRESION_MAP = {
+        'alto': 140, 'alta': 140, 'high': 140,
+        'bajo': 90,  'baja': 90,  'low': 90,
+    }
     for col, tipo in col_map.items():
         if col not in df.columns:
             continue
         antes = df[col].dtype
+        if col in ('presión_sistólica', 'presión_diastólica', 'presion_sistolica', 'presion_diastolica'):
+            mapped = df[col].astype(str).str.strip().str.lower().map(PRESION_MAP)
+            mask = mapped.notna()
+            df.loc[mask, col] = mapped[mask]
         df[col] = pd.to_numeric(df[col], errors='coerce')
         if tipo == 'int':
             df[col] = df[col].astype('Int64')
@@ -110,6 +118,15 @@ def _tratar_nulos(df: pd.DataFrame, logs: list) -> tuple[pd.DataFrame, int]:
     for col in ['peso', 'glucosa', 'colesterol', 'temperatura', 'IMC']:
         if col in df.columns:
             df[col] = df[col].fillna(df[col].median())
+    # Presión arterial → valores predeterminados
+    if 'presión_sistólica' in df.columns:
+        df['presión_sistólica'] = df['presión_sistólica'].fillna(140)
+    elif 'presion_sistolica' in df.columns:
+        df['presion_sistolica'] = df['presion_sistolica'].fillna(140)
+    if 'presión_diastólica' in df.columns:
+        df['presión_diastólica'] = df['presión_diastólica'].fillna(90)
+    elif 'presion_diastolica' in df.columns:
+        df['presion_diastolica'] = df['presion_diastolica'].fillna(90)
     # Categóricas → moda
     for col in ['sexo', 'actividad_física', 'diagnóstico_preliminar', 'riesgo_enfermedad']:
         if col in df.columns and df[col].isnull().any():
@@ -185,17 +202,24 @@ def _calcular_imc(df: pd.DataFrame, logs: list) -> pd.DataFrame:
     return df
 
 
-def _clasificar_presion(df: pd.DataFrame, logs: list) -> pd.DataFrame:
-    sistolica = df.get('presion_sistolica', pd.Series(dtype=float)).astype(float)
-    cond_alta = sistolica >= 140
-    cond_baja = sistolica < 90
-    df['clasificacion_presion'] = 'normal'
-    df.loc[cond_alta, 'clasificacion_presion'] = 'alta'
-    df.loc[cond_baja, 'clasificacion_presion'] = 'baja'
-    df.loc[sistolica.isna(), 'clasificacion_presion'] = None
-    clasificadas = int(df['clasificacion_presion'].notna().sum())
-    logs.append(f"[TRANSFORM] Presión clasificada en {clasificadas} pacientes (alta>=140, baja<90)")
-    return df
+def _ignorar_basura(df: pd.DataFrame, logs: list) -> tuple[pd.DataFrame, int]:
+    criterios = df['id_paciente'].isna()
+    for col in ['nombres', 'apellidos']:
+        if col in df.columns:
+            criterios |= df[col].astype(str).str.strip().eq('')
+    columnas_clinicas = ['edad', 'peso', 'altura', 'glucosa', 'colesterol',
+                         'temperatura', 'frecuencia_cardiaca',
+                         'presión_sistólica', 'presion_sistolica',
+                         'presión_diastólica', 'presion_diastolica',
+                         'saturación_oxígeno', 'saturacion_oxigeno']
+    cols_existentes = [c for c in columnas_clinicas if c in df.columns]
+    nulos_por_fila = df[cols_existentes].isna().sum(axis=1)
+    criterios |= nulos_por_fila > len(cols_existentes) * 0.6
+    ignorados = int(criterios.sum())
+    if ignorados:
+        df = df[~criterios].copy()
+        logs.append(f"[TRANSFORM] {ignorados} registros ignorados por datos basura")
+    return df, ignorados
 
 
 def _detectar_criticos(df: pd.DataFrame, logs: list) -> pd.DataFrame:
@@ -215,11 +239,11 @@ def transform(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
     df, corregidos = _limpiar_tipos(df, logs)
     df, duplicados = _eliminar_duplicados(df, logs)
+    df, ignorados = _ignorar_basura(df, logs)
     df, nulos = _tratar_nulos(df, logs)
     df = _validar_rangos(df, logs)
     df = _normalizar_categoricas(df, logs)
     df = _calcular_imc(df, logs)
-    df = _clasificar_presion(df, logs)
     df = _detectar_criticos(df, logs)
 
     logs.append(f"[TRANSFORM] Registros finales limpios: {len(df)}")
@@ -228,6 +252,7 @@ def transform(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         'registros_limpios': len(df),
         'duplicados_eliminados': duplicados,
         'nulos_tratados': nulos,
+        'registros_ignorados': ignorados,
     }
 
 
@@ -264,7 +289,6 @@ def load(df: pd.DataFrame, logs: list) -> int:
             riesgo_enfermedad=row.get('riesgo_enfermedad'),
             fecha_consulta=row.get('fecha_consulta') if pd.notna(row.get('fecha_consulta')) else None,
             es_critico=bool(row.get('es_critico', False)),
-            clasificacion_presion=row.get('clasificacion_presion'),
         )
         pacientes.append(p)
 

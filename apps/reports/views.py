@@ -1,7 +1,7 @@
 """
-Módulo de Reportes - exportación PDF, Excel, CSV
+Módulo de Reportes - exportación PDF
 """
-import io, csv
+import io
 from datetime import datetime
 from django.db.models import Q
 from django.http import HttpResponse
@@ -9,7 +9,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from apps.authentication.permissions import EsMedico
 from apps.etl.models import Paciente, HistorialETL
-from apps.etl.serializers import PacienteSerializer
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -36,71 +35,6 @@ def _filtrar_pacientes(request):
         )
     return qs
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, EsMedico])
-def exportar_csv(request):
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = 'attachment; filename="pacientes.csv"'
-    response.write('\ufeff')
-    writer = csv.writer(response)
-    campos = ['id_paciente','nombres','apellidos','edad','sexo','peso','altura',
-              'imc','clasificacion_imc','presion_sistolica','presion_diastolica',
-              'glucosa','colesterol','saturacion_oxigeno','temperatura',
-              'diagnostico_preliminar','riesgo_enfermedad','es_critico','fecha_consulta']
-    writer.writerow(campos)
-    for p in _filtrar_pacientes(request):
-        writer.writerow([getattr(p, c, '') for c in campos])
-    return response
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, EsMedico])
-def exportar_excel(request):
-    try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment
-    except ImportError:
-        from rest_framework.response import Response
-        return Response({'error': 'openpyxl no instalado'}, status=500)
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Pacientes"
-
-    headers = ['ID','Nombres','Apellidos','Edad','Sexo','Peso','Altura','IMC',
-               'Clasificación IMC','P. Sistólica','P. Diastólica','Glucosa',
-               'Colesterol','Sat. Oxígeno','Temperatura','Diagnóstico','Riesgo','Crítico']
-    
-    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num, value=header)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal='center')
-
-    riesgo_colors = {'bajo': 'C6EFCE', 'medio': 'FFEB9C', 'alto': 'FFC7CE', 'critico': 'FF0000'}
-    for row_num, p in enumerate(_filtrar_pacientes(request), 2):
-        row = [p.id_paciente, p.nombres, p.apellidos, p.edad, p.sexo,
-               p.peso, p.altura, p.imc, p.clasificacion_imc,
-               p.presion_sistolica, p.presion_diastolica, p.glucosa,
-               p.colesterol, p.saturacion_oxigeno, p.temperatura,
-               p.diagnostico_preliminar, p.riesgo_enfermedad, 'Sí' if p.es_critico else 'No']
-        for col_num, value in enumerate(row, 1):
-            cell = ws.cell(row=row_num, column=col_num, value=value)
-        riesgo = p.riesgo_enfermedad or 'bajo'
-        color = riesgo_colors.get(riesgo, 'FFFFFF')
-        ws.cell(row=row_num, column=17).fill = PatternFill(
-            start_color=color, end_color=color, fill_type="solid")
-
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    response = HttpResponse(
-        buffer.getvalue(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = 'attachment; filename="reporte_pacientes.xlsx"'
-    return response
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, EsMedico])

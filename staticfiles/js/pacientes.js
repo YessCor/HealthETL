@@ -16,7 +16,7 @@ async function cargarPacientes(pagina = 1) {
   if (critico) url += `&critico=true`;
 
   const tbody = document.getElementById('pacientes-tbody');
-  tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5" style="color:var(--text-muted);">
+  tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5" style="color:var(--text-muted);">
     <div class="spinner-border spinner-border-sm me-2" style="color:var(--blue);"></div>Cargando…
   </td></tr>`;
 
@@ -38,7 +38,7 @@ async function cargarPacientes(pagina = 1) {
 
     renderPaginacion();
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4" style="color:var(--danger);">
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4" style="color:var(--danger);">
       Error al cargar datos: ${e.message}
     </td></tr>`;
   }
@@ -47,7 +47,7 @@ async function cargarPacientes(pagina = 1) {
 function renderTabla(pacientes) {
   const tbody = document.getElementById('pacientes-tbody');
   if (!pacientes.length) {
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5" style="color:var(--text-muted);">
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5" style="color:var(--text-muted);">
       <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
       Sin pacientes encontrados
     </td></tr>`;
@@ -77,8 +77,199 @@ function renderTabla(pacientes) {
           ? '<i class="bi bi-exclamation-triangle-fill" style="color:var(--danger);" title="Crítico"></i>'
           : '<i class="bi bi-check-circle" style="color:var(--success);"></i>'}
       </td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="abrirPrediccionRiesgo(${p.id_paciente})">
+          <i class="bi bi-shield-check me-1"></i>Predicción
+        </button>
+      </td>
     </tr>
   `).join('');
+}
+
+function abrirPrediccionRiesgo(pacienteId) {
+  const modalEl = document.getElementById('modal-prediccion-riesgo');
+  const modal = modalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+
+  // Si Bootstrap no está disponible, evitamos abrir un modal “invisible”
+  // (intercepta clicks) y mostramos error en pantalla.
+  if (!modal) {
+    const errEl = document.getElementById('prediccion-error');
+    if (errEl) {
+      errEl.classList.remove('d-none');
+      errEl.innerHTML = `<strong>Error:</strong> Modal no disponible (Bootstrap no cargado).`;
+    }
+    return;
+  }
+
+  // reset UI
+  document.getElementById('prediccion-error').classList.add('d-none');
+  document.getElementById('prediccion-error').innerHTML = '';
+  document.getElementById('prediccion-loading').style.display = 'block';
+  document.getElementById('prediccion-resumen-card').style.display = 'none';
+  document.getElementById('prediccion-modelo-card').style.display = 'none';
+  document.getElementById('prediccion-distribucion').style.display = 'none';
+  document.getElementById('prediccion-factores').innerHTML = '';
+  document.getElementById('prediccion-recomendaciones').innerHTML = '';
+
+  document.getElementById('prediccion-paciente-nombre').textContent = '—';
+  document.getElementById('prediccion-nivel').textContent = '—';
+  document.getElementById('prediccion-probabilidad').textContent = '—';
+  document.getElementById('prediccion-puntuacion-clinica').textContent = '—';
+  document.getElementById('prediccion-nivel-detalle').textContent = '—';
+
+  if (!modal) return;
+  modal.show();
+
+  authFetch('/api/ml/predecir/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ paciente_id: pacienteId })
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      document.getElementById('prediccion-loading').style.display = 'none';
+      document.getElementById('prediccion-resumen-card').style.display = 'block';
+
+      const riesgoMap = {
+        'bajo': { label: 'Bajo', class: 'riesgo-bajo', color: 'var(--success)' },
+        'medio': { label: 'Medio', class: 'riesgo-medio', color: 'var(--warning)' },
+        'alto': { label: 'Alto', class: 'riesgo-alto', color: 'var(--orange)' },
+        'critico': { label: 'Crítico', class: 'riesgo-critico', color: 'var(--danger)' }
+      };
+
+      const riesgoVal = (data.riesgo_predicho || 'bajo').toLowerCase();
+      const riesgoMeta = riesgoMap[riesgoVal] || { label: data.nivel_descripcion || riesgoVal, class: 'riesgo-bajo', color: 'var(--success)' };
+
+      document.getElementById('prediccion-paciente-nombre').textContent = data.paciente_nombre || '—';
+      document.getElementById('prediccion-nivel').innerHTML = `<span class="badge-riesgo ${riesgoMeta.class}" style="font-size: 13.5px; font-weight: 700; padding: 4px 12px;">${riesgoMeta.label}</span>`;
+
+      const prob = data.probabilidad !== undefined && data.probabilidad !== null ? data.probabilidad : null;
+      if (prob !== null) {
+        const pct = (prob * 100).toFixed(1);
+        document.getElementById('prediccion-probabilidad').innerHTML = `
+          <div class="d-flex align-items-center gap-2" style="width: 100%; max-width: 250px;">
+            <span style="font-weight:800; min-width: 45px;">${pct}%</span>
+            <div class="progress flex-grow-1" style="height: 8px; margin-bottom: 0;">
+              <div class="progress-bar" role="progressbar" style="width: ${pct}%; background: ${riesgoMeta.color} !important;"></div>
+            </div>
+          </div>
+        `;
+      } else {
+        document.getElementById('prediccion-probabilidad').textContent = '—';
+      }
+
+      document.getElementById('prediccion-puntuacion-clinica').innerHTML = `
+        <span class="badge text-bg-light border" style="font-size:13px; font-weight:700; color:var(--text-mid)!important; padding: 4px 10px;">
+          ${data.puntuacion_clinica ?? '0'} puntos
+        </span>
+      `;
+      document.getElementById('prediccion-nivel-detalle').textContent = data.nivel_detalle || '—';
+
+      const factores = data.factores_clave || [];
+      const factoresUl = document.getElementById('prediccion-factores');
+      factoresUl.innerHTML = factores.length
+        ? factores.map((f) => {
+            const fRiesgo = (f.impacto || 'bajo').toLowerCase();
+            const fMeta = riesgoMap[fRiesgo] || { class: 'text-bg-light border', label: f.impacto };
+            return `
+              <li class="list-group-item d-flex align-items-start justify-content-between gap-3 py-3">
+                <div>
+                  <div style="font-weight:700; color:var(--navy);">${f.factor || ''} <span style="font-weight:500; font-size:12px; color:var(--text-muted);">(${f.valor}${f.unidad ? ' ' + f.unidad : ''})</span></div>
+                  <div style="font-size:12px;color:var(--text-muted); margin-top:2px;">${f.descripcion || ''}</div>
+                </div>
+                <span class="badge-riesgo ${fMeta.class}" style="white-space:nowrap; font-size: 10px;">${f.impacto || ''}</span>
+              </li>
+            `;
+          }).join('')
+        : `<li class="list-group-item text-center py-4" style="color:var(--text-muted);">Sin factores de riesgo alterados</li>`;
+
+      const recs = data.recomendaciones || [];
+      const recsUl = document.getElementById('prediccion-recomendaciones');
+      recsUl.innerHTML = recs.length
+        ? recs.map((r) => `
+            <li class="list-group-item py-3 d-flex align-items-start gap-2" style="font-size:13px;">
+              <i class="bi bi-check-circle-fill text-success mt-0.5" style="flex-shrink:0;"></i>
+              <span>${r}</span>
+            </li>
+          `).join('')
+        : `<li class="list-group-item text-center py-4" style="color:var(--text-muted);">Sin recomendaciones específicas</li>`;
+
+      if (data.prediccion_modelo) {
+        document.getElementById('prediccion-modelo-card').style.display = 'block';
+        document.getElementById('prediccion-modelo-badge').textContent = data.prediccion_modelo.modelo_nombre || 'Modelo';
+        
+        const mlRiesgoVal = (data.prediccion_modelo.riesgo_predicho || 'bajo').toLowerCase();
+        const mlRiesgoMeta = riesgoMap[mlRiesgoVal] || { label: data.prediccion_modelo.riesgo_predicho, class: 'riesgo-bajo', color: 'var(--success)' };
+        
+        document.getElementById('prediccion-modelo-riesgo').innerHTML = `<span class="badge-riesgo ${mlRiesgoMeta.class}" style="font-size:12px; font-weight:700;">${mlRiesgoMeta.label}</span>`;
+        
+        const mlProb = data.prediccion_modelo.probabilidad;
+        if (mlProb !== undefined && mlProb !== null) {
+          const mlPct = (mlProb * 100).toFixed(1);
+          document.getElementById('prediccion-modelo-prob').innerHTML = `
+            <div class="d-flex align-items-center gap-2" style="width: 100%; max-width: 250px;">
+              <span style="font-weight:800; min-width: 45px;">${mlPct}%</span>
+              <div class="progress flex-grow-1" style="height: 8px; margin-bottom: 0;">
+                <div class="progress-bar" role="progressbar" style="width: ${mlPct}%; background: ${mlRiesgoMeta.color} !important;"></div>
+              </div>
+            </div>
+          `;
+        } else {
+          document.getElementById('prediccion-modelo-prob').textContent = '—';
+        }
+
+        const dist = data.distribucion_clases;
+        if (dist && typeof dist === 'object') {
+          document.getElementById('prediccion-distribucion').style.display = 'block';
+          const body = document.getElementById('prediccion-distribucion-body');
+          body.innerHTML = Object.entries(dist)
+            .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+            .map(([k, v]) => {
+              const kClean = k.toLowerCase();
+              const kMeta = riesgoMap[kClean] || { class: 'text-bg-light border' };
+              const vPct = (Number(v) * 100).toFixed(2);
+              return `
+                <span class="badge-riesgo ${kMeta.class}" style="font-size: 11px; font-weight: 700; padding: 4px 10px;">
+                  ${k}: ${vPct}%
+                </span>
+              `;
+            })
+            .join('');
+        }
+      }
+    })
+    .catch((err) => {
+      document.getElementById('prediccion-loading').style.display = 'none';
+      const errEl = document.getElementById('prediccion-error');
+      errEl.classList.remove('d-none');
+      errEl.innerHTML = `<strong>Error:</strong> ${err.message || err}`;
+    });
+}
+
+
+function descargarPacientes() {
+  const riesgo  = document.getElementById('filtro-riesgo').value;
+  const sexo    = document.getElementById('filtro-sexo').value;
+  const critico = document.getElementById('filtro-critico').checked;
+  const busqueda = document.getElementById('busqueda').value;
+
+  let url = '/api/reportes/pdf/?';
+  const params = [];
+  if (riesgo)  params.push(`riesgo=${riesgo}`);
+  if (sexo)    params.push(`sexo=${sexo}`);
+  if (critico) params.push(`critico=true`);
+  if (busqueda) params.push(`busqueda=${encodeURIComponent(busqueda)}`);
+  url += params.join('&');
+
+  descargarArchivo(url, 'reporte_pacientes.pdf');
 }
 
 function filtrarLocal() {
@@ -115,3 +306,4 @@ function renderPaginacion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => cargarPacientes(1));
+

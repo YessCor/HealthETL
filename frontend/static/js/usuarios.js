@@ -26,11 +26,33 @@ async function cargarUsuarios() {
 document.addEventListener('DOMContentLoaded', () => {
   cargarUsuarios();
 
-  document.getElementById('form-usuario').addEventListener('submit', async (e) => {
+  const btnMostrar = document.getElementById('btn-mostrar-form-usuario');
+  const contenedor = document.getElementById('contenedor-form-usuario');
+  const msg = document.getElementById('msg-form');
+
+  if (btnMostrar && contenedor) {
+    btnMostrar.addEventListener('click', () => {
+      contenedor.style.display = 'block';
+      if (msg) {
+        msg.textContent = '';
+        msg.style.color = '';
+      }
+    });
+  } else {
+    // Fallback: si por alguna razón no existe el contenedor/botón, habilitar el formulario.
+    if (contenedor) contenedor.style.display = 'block';
+  }
+
+  const form = document.getElementById('form-usuario');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const msg = document.getElementById('msg-form');
-    msg.textContent = 'Creando...';
-    msg.style.color = 'var(--text-muted)';
+    if (msg) {
+      msg.textContent = 'Creando...';
+      msg.style.color = 'var(--text-muted)';
+    }
+
 
     const payload = {
       username: document.getElementById('input-username').value.trim(),

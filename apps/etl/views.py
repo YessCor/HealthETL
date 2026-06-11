@@ -11,6 +11,9 @@ from drf_spectacular.types import OpenApiTypes
 from .models import Paciente, HistorialETL
 from .serializers import PacienteSerializer, HistorialETLSerializer
 from .etl_engine import ejecutar_etl
+from django.db.models import Q
+
+
 
 
 class PacienteViewSet(viewsets.ReadOnlyModelViewSet):
@@ -42,10 +45,34 @@ class PacienteViewSet(viewsets.ReadOnlyModelViewSet):
         riesgo  = self.request.query_params.get('riesgo')
         critico = self.request.query_params.get('critico')
         sexo    = self.request.query_params.get('sexo')
-        if riesgo:           qs = qs.filter(riesgo_enfermedad=riesgo)
-        if critico == 'true': qs = qs.filter(es_critico=True)
-        if sexo:             qs = qs.filter(sexo=sexo)
+        busqueda = self.request.query_params.get('busqueda')
+
+        if riesgo:
+            qs = qs.filter(riesgo_enfermedad=riesgo)
+        if critico == 'true':
+            qs = qs.filter(es_critico=True)
+        if sexo:
+            qs = qs.filter(sexo=sexo)
+
+        # Búsqueda global (en todos los registros)
+        # - Texto: nombres/apellidos/diagnóstico (contains case-insensitive)
+        # - ID: si la búsqueda es numérica
+        if busqueda:
+            b = busqueda.strip()
+            if b:
+                filtro = (
+                    Q(nombres__icontains=b) |
+                    Q(apellidos__icontains=b) |
+                    Q(diagnostico_preliminar__icontains=b)
+                )
+
+                if b.isdigit():
+                    filtro |= Q(id_paciente__exact=int(b))
+
+                qs = qs.filter(filtro)
+
         return qs
+
 
 
 @extend_schema(
@@ -87,7 +114,7 @@ def subir_dataset(request):
         if not archivo:
             return Response({'error': 'No se envió archivo'}, status=status.HTTP_400_BAD_REQUEST)
 
-        os.makedirs(settings.DATASETS_DIR, exist_ok=True)
+        os.makedirs(settings.MEDIA_ROOT / 'etl_uploads', exist_ok=True)
         ext = os.path.splitext(archivo.name)[1].lower()
         if ext not in ['.csv', '.xlsx', '.xls']:
             return Response(
@@ -95,7 +122,7 @@ def subir_dataset(request):
                 status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
             )
 
-        destino = os.path.join(settings.DATASETS_DIR, f'dataset_clinico{ext}')
+        destino = settings.MEDIA_ROOT / 'etl_uploads' / f'uploaded{ext}'
         with open(destino, 'wb') as f:
             for chunk in archivo.chunks():
                 f.write(chunk)

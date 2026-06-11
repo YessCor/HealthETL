@@ -20,6 +20,7 @@ def extract(filepath: str) -> tuple[pd.DataFrame, dict]:
     """Lee el archivo Excel/CSV y retorna el DataFrame crudo + metadata."""
     inicio = time.time()
     logs = []
+    filepath = str(filepath)
 
     if filepath.endswith('.xlsx') or filepath.endswith('.xls'):
         df = pd.read_excel(filepath, engine='openpyxl')

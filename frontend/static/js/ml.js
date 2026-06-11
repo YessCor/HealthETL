@@ -249,39 +249,95 @@ async function predecirPaciente() {
     const data = await res.json().catch(() => ({}));
 
     if (res.ok) {
-      const colores = { bajo: 'success', medio: 'warning', alto: 'orange', critico: 'danger' };
-      const color = colores[data.riesgo_predicho] || 'secondary';
+      const colores = { bajo: 'success', medio: 'warning', alto: 'warning', critico: 'danger' };
+      const alertClass = data.riesgo_predicho === 'critico' ? 'danger' : (data.riesgo_predicho === 'alto' ? 'warning' : (data.riesgo_predicho === 'medio' ? 'warning' : 'success'));
       const pct = (data.probabilidad * 100).toFixed(1);
 
-      const distHtml = Object.entries(data.distribucion_clases || {})
-        .map(([k, v]) => `
-          <div class="d-flex justify-content-between small">
-            <span>${k}</span>
-            <span class="fw-semibold">${(v * 100).toFixed(1)}%</span>
+      const factoresHtml = (data.factores_clave || []).map(f => {
+        const impColor = { alto: 'danger', critico: 'danger', medio: 'warning', bajo: 'success' };
+        return `
+          <div class="d-flex align-items-center gap-2 py-1">
+            <span class="badge bg-${impColor[f.impacto] || 'secondary'} rounded-pill" style="width:55px;font-size:10px;">${f.impacto}</span>
+            <span style="font-size:13px;"><strong>${f.factor}:</strong> ${f.valor} ${f.unidad}</span>
+          </div>`;
+      }).join('');
+
+      const recsHtml = (data.recomendaciones || []).map(r =>
+        `<li style="font-size:13px;">${r}</li>`
+      ).join('');
+
+      // ML model section (if available)
+      let modelHtml = '';
+      if (data.prediccion_modelo) {
+        const pm = data.prediccion_modelo;
+        const mc = colores[pm.riesgo_predicho] || 'secondary';
+        const mpct = (pm.probabilidad * 100).toFixed(1);
+        modelHtml = `
+          <hr class="my-2">
+          <div class="small fw-semibold mb-1">Predicción del Modelo IA (referencia):</div>
+          <div class="d-flex align-items-center gap-2 small">
+            <span class="badge bg-${mc}">${pm.riesgo_predicho}</span>
+            <span>${mpct}% · ${pm.modelo_algoritmo.replace('_', ' ')}</span>
           </div>
-          <div class="progress mb-1" style="height:5px">
-            <div class="progress-bar bg-${colores[k] || 'secondary'}" style="width:${(v * 100).toFixed(1)}%"></div>
-          </div>
-        `)
-        .join('');
+          <div class="text-muted small mt-1" style="font-size:11px;">
+            * El modelo ML se entrena con los datos del dataset. Si la predicción no coincide con la evaluación clínica, la evaluación clínica es la que prevalece.
+          </div>`;
+      }
+
+      // Distribution by classes (only from ML model)
+      let distHtml = '';
+      if (data.distribucion_clases) {
+        distHtml = Object.entries(data.distribucion_clases)
+          .map(([k, v]) => {
+            const c = colores[k] || 'secondary';
+            return `
+            <div class="d-flex justify-content-between small">
+              <span>${k.charAt(0).toUpperCase() + k.slice(1)}</span>
+              <span class="fw-semibold">${(v * 100).toFixed(1)}%</span>
+            </div>
+            <div class="progress mb-1" style="height:5px">
+              <div class="progress-bar bg-${c}" style="width:${(v * 100).toFixed(1)}%"></div>
+            </div>`;
+          })
+          .join('');
+        distHtml = `<hr class="my-2">
+          <div class="small fw-semibold mb-1">Distribución del modelo IA:</div>
+          ${distHtml}`;
+      }
 
       div.innerHTML = `
-        <div class="alert alert-${color === 'orange' ? 'warning' : color} border-0 mt-2">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fs-2">🏥</div>
+        <div class="alert alert-${alertClass} border-0 mt-2">
+          <div class="d-flex align-items-start gap-3">
+            <div style="font-size:2rem;line-height:1;">
+              ${data.riesgo_predicho === 'critico' || data.riesgo_predicho === 'alto' ? '⚠️' : '✅'}
+            </div>
             <div class="flex-grow-1">
               <div class="small text-muted">Paciente: <strong>${data.paciente_nombre || 'ID ' + data.paciente_id}</strong></div>
-              <div class="fw-bold">Riesgo Predicho:
-                <span class="text-${color === 'orange' ? 'warning' : color} text-uppercase">${data.riesgo_predicho}</span>
-              </div>
-              <div class="small">Probabilidad: ${pct}%</div>
+              <div class="fw-bold fs-5">${data.nivel_descripcion || data.riesgo_predicho}</div>
+              <div class="small text-muted">Probabilidad clínica: <strong>${pct}%</strong></div>
               <div class="progress mt-1" style="height:8px">
-                <div class="progress-bar bg-${color === 'orange' ? 'warning' : color}" style="width:${pct}%"></div>
+                <div class="progress-bar bg-${alertClass === 'warning' ? 'warning' : alertClass}" style="width:${pct}%"></div>
               </div>
             </div>
           </div>
+
+          ${data.nivel_detalle ? `
           <hr class="my-2">
-          <div class="small fw-semibold mb-1">Distribución por clases:</div>
+          <div class="small text-muted">${data.nivel_detalle}</div>` : ''}
+
+          ${factoresHtml ? `
+          <hr class="my-2">
+          <div class="small fw-semibold mb-1">Factores clave detectados:</div>
+          ${factoresHtml}` : ''}
+
+          ${recsHtml ? `
+          <hr class="my-2">
+          <div class="small fw-semibold mb-1">Recomendaciones:</div>
+          <ul class="mb-0 ps-3" style="list-style:disc;">
+            ${recsHtml}
+          </ul>` : ''}
+
+          ${modelHtml}
           ${distHtml}
         </div>`;
     } else {
